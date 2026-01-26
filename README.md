@@ -1,36 +1,14 @@
 
-# 🐳 Student Registration System — Full Deployment Guide
 
-A **3-Tier Web Application**
+# 🐳 Student Registration System — Full Deployment Guide
 
 Frontend (React) → Backend (Spring Boot) → Database (MariaDB)
 
 ---
 
-# 📦 Project Structure
+# 🐳 METHOD 1 — DOCKER DEPLOYMENT
 
-EasyCRUD/ ├── backend/     → Spring Boot API ├── frontend/    → React UI └── README.md
-
----
-
-# ✅ Prerequisites
-
-| Tool | Purpose |
-|------|--------|
-| Ubuntu / Linux Server | Hosting |
-| Docker | Container deployment |
-| Git | Clone repository |
-| Java 17 | Backend manual run |
-| Maven | Build backend |
-| Node.js + npm | Build frontend |
-
----
-
-# 🐳 METHOD 1 — DOCKER DEPLOYMENT (RECOMMENDED)
-
----
-
-## 🚀 Step 1 — Install Docker
+## 🚀 Install Docker
 
 ```bash
 sudo apt update
@@ -42,13 +20,9 @@ docker --version
 
 ---
 
-🧱 Step 2 — Run Database (MariaDB)
-
-Create volume
+🧱 Run Database (MariaDB)
 
 docker volume create student-db-vol
-
-Start container
 
 docker run -d \
   --name mariadb-container \
@@ -60,35 +34,27 @@ docker run -d \
 
 ---
 
-🔍 Step 3 — Get Database IP
+🔍 Get Database IP
 
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mariadb-container
-
-📌 Save this IP — needed in backend config.
 
 
 ---
 
-⚙️ Step 4 — Backend Setup
+⚙️ Backend Setup
 
 git clone https://github.com/shubhamkalsait/EasyCRUD.git
 cd EasyCRUD/backend
 
-✏️ Edit Configuration
-
-File:
+Edit file:
 
 backend/src/main/resources/application.properties
 
-Change:
+Update:
 
-server.port=8080
 spring.datasource.url=jdbc:mariadb://<DB_IP>:3306/studentdb
 spring.datasource.username=root
 spring.datasource.password=redhat
-spring.jpa.hibernate.ddl-auto=update
-
-Replace <DB_IP>.
 
 
 ---
@@ -105,7 +71,7 @@ ENTRYPOINT ["java","-jar","target/student-registration-backend-0.0.1-SNAPSHOT.ja
 
 ---
 
-Build & Push
+Build & Push Backend
 
 docker build -t yourdockerhub/curd_app:backend-v1 .
 docker push yourdockerhub/curd_app:backend-v1
@@ -123,13 +89,12 @@ docker run -d \
 
 ---
 
-🎨 Step 5 — Frontend Setup
+🎨 Frontend Setup
 
 cd ../frontend
-
-✏️ Edit .env
-
 vim .env
+
+Add:
 
 VITE_API_URL="http://<SERVER_PUBLIC_IP>:8080/api"
 
@@ -150,7 +115,7 @@ CMD ["httpd","-D","FOREGROUND"]
 
 ---
 
-Build & Run
+Build & Run Frontend
 
 docker build -t yourdockerhub/curd_app:frontend-v1 .
 docker push yourdockerhub/curd_app:frontend-v1
@@ -163,7 +128,7 @@ docker run -d \
 
 ---
 
-🌍 Access Application
+🌍 Access App
 
 http://YOUR_SERVER_PUBLIC_IP
 
@@ -172,34 +137,21 @@ http://YOUR_SERVER_PUBLIC_IP
 
 🖥 METHOD 2 — MANUAL DEPLOYMENT
 
-
----
-
-⚙️ Backend Manual
+Backend
 
 sudo apt install openjdk-17-jdk maven -y
 cd backend
-vim src/main/resources/application.properties
-
-Update DB values, then:
-
 mvn clean package
 java -jar target/spring-backend-v1.jar
 
 
 ---
 
-🎨 Frontend Manual
+Frontend
 
 sudo apt install nodejs npm apache2 -y
 cd frontend
 npm install
-vim .env
-
-VITE_API_URL="http://<BACKEND_IP>:8080/api"
-
-Build & deploy:
-
 npm run build
 sudo cp -rf dist/* /var/www/html/
 sudo systemctl restart apache2
@@ -207,44 +159,11 @@ sudo systemctl restart apache2
 
 ---
 
-🧹 Docker Cleanup Commands
+🧹 Docker Cleanup
 
 docker stop $(docker ps -aq)
 docker rm $(docker ps -aq)
 docker rm -f $(docker ps -aq)
 docker volume prune
 docker network prune
-
-
----
-
-❌ Common Errors
-
-Issue	Fix
-
-Backend DB error	Wrong DB IP
-React API error	Wrong .env URL
-Port in use	Change port
-Container exited	docker logs <name>
-
-
-
----
-
-🧠 Must Change
-
-File	Update
-
-backend/application.properties	DB IP
-frontend/.env	Backend Public IP
-Docker tags	Your DockerHub username
-
-
-
----
-
-🏁 Architecture
-
-Browser → Frontend (80) → Backend (8080) → MariaDB
-
 
