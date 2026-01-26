@@ -108,3 +108,4 @@ docker stop db api web
 docker rm db api web
 docker volume prune
 ```
+[EasyCRUD Repository](https://github.com/shubhamkalsait/EasyCRUD.git)
