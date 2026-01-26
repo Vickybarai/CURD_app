@@ -206,6 +206,5 @@ Docker image tags	Your Docker Hub username
 Browser → Frontend (80) → Backend (8080) → MariaDB
 ```
 
-```
 
 <[EasyCRUD Repository](https://github.com/shubhamkalsait/EasyCRUD.git)
