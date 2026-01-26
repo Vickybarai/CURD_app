@@ -1,182 +1,109 @@
-
-# 🐳 Student Registration System — Full Deployment Guide
-
-A 3-Tier Web Application  
-Frontend (React) → Backend (Spring Boot) → Database (MariaDB)
-
----
-
-## 📦 Project Structure
-
-
-
-EasyCRUD/
-├── backend/   # Spring Boot API
-├── frontend/  # React UI
-└── README.md
-
-
-
----
-
-## ✅ Prerequisites
-
-| Tool                  | Purpose               |
-|-----------------------|-----------------------|
-| Ubuntu / Linux Server | Hosting               |
-| Docker                | Container deployment  |
-| Git                   | Clone repository      |
-| Java 17               | Backend manual run    |
-| Maven                 | Build backend         |
-| Node.js + npm         | Build frontend        |
-
----
-
-## 🐳 METHOD 1 — DOCKER DEPLOYMENT (RECOMMENDED)
-
-### 🚀 Step 1 — Install Docker
-```bash
+# -------------------------------
+# 1. Update Ubuntu & Install Docker
+# -------------------------------
 sudo apt update
 sudo apt install docker.io -y
 sudo systemctl start docker
 sudo systemctl enable docker
 docker --version
-```
 
-🧱 Step 2 — Run Database (MariaDB)
-Create volume
-
-```bash
+# -------------------------------
+# 2. Create MariaDB Volume & Run Container
+# -------------------------------
 docker volume create student-db-vol
-```
 
-Start container
-
-```bash
 docker run -d \
   --name mariadb-container \
   -e MARIADB_ROOT_PASSWORD=redhat \
   -e MARIADB_DATABASE=studentdb \
   -v student-db-vol:/var/lib/mysql \
   mariadb:latest
-```
 
-🔍 Step 3 — Get Database IP
-
-```bash
+# -------------------------------
+# 3. Get MariaDB Container IP
+# -------------------------------
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mariadb-container
-```
 
-Save this IP — needed in backend config.
-
-⚙️ Step 4 — Backend Setup
-
-```bash
+# -------------------------------
+# 4. Backend Setup
+# -------------------------------
 git clone https://github.com/shubhamkalsait/EasyCRUD.git
 cd EasyCRUD/backend
-```
 
-Edit file:
+# Backend Dockerfile
+cat > Dockerfile <<EOF
+FROM maven:3.8.3-openjdk-17
+WORKDIR /opt/app
+COPY . .
+RUN mvn clean package -DskipTests
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","target/student-registration-backend-0.0.1-SNAPSHOT.jar"]
+EOF
 
-`backend/src/main/resources/application.properties`
-
-Change DB IP inside:
-
-```
-spring.datasource.url=jdbc:mariadb://<DB_IP>:3306/studentdb
-```
-
-Build & Push Image
-
-```bash
-docker build -t yourdockerhub/curd_app:backend-v1 .
-docker push yourdockerhub/curd_app:backend-v1
-```
-
-Run Backend
-
-```bash
+# Build & Run Backend
+docker build -t myname/backend:v1 .
 docker run -d \
   --name backend-container \
   -p 8080:8080 \
-  yourdockerhub/curd_app:backend-v1
-```
+  myname/backend:v1
 
-🎨 Step 5 — Frontend Setup
+# Optional: Push Backend to Docker Hub
+docker login
+docker tag myname/backend:v1 mydockerhubuser/curd_app:backend-v1
+docker push mydockerhubuser/curd_app:backend-v1
 
-```bash
+# -------------------------------
+# 5. Frontend Setup
+# -------------------------------
 cd ../frontend
-vim .env
-```
 
-Edit API URL:
+# Frontend Dockerfile
+cat > Dockerfile <<EOF
+FROM node:22-alpine
+WORKDIR /opt/app
+COPY . .
+RUN npm install && npm run build
+RUN apk add --no-cache apache2
+RUN cp -rf dist/* /var/www/localhost/htdocs/
+EXPOSE 80
+CMD ["httpd","-D","FOREGROUND"]
+EOF
 
-```
-VITE_API_URL="http://<SERVER_PUBLIC_IP>:8080/api"
-```
-
-Build & Run
-
-```bash
-docker build -t yourdockerhub/curd_app:frontend-v1 .
-docker push yourdockerhub/curd_app:frontend-v1
-
+# Build & Run Frontend
+docker build -t myname/frontend:v1 .
 docker run -d \
   --name frontend-container \
   -p 80:80 \
-  yourdockerhub/curd_app:frontend-v1
-```
+  myname/frontend:v1
 
-🌍 Access Application
+# Optional: Push Frontend to Docker Hub
+docker tag myname/frontend:v1 mydockerhubuser/curd_app:frontend-v1
+docker push mydockerhubuser/curd_app:frontend-v1
 
-```
-http://YOUR_SERVER_PUBLIC_IP
-```
+# -------------------------------
+# 6. Manual Deployment (Without Docker)
+# -------------------------------
 
----
-
-🖥 METHOD 2 — MANUAL DEPLOYMENT
-
-⚙️ Backend Manual
-
-```bash
-sudo apt install openjdk-17-jdk maven -y
-cd backend
-vim src/main/resources/application.properties
+# Backend
+sudo apt install openjdk-17-jdk -y
+sudo apt install maven -y
 mvn clean package
 java -jar target/spring-backend-v1.jar
-```
 
-🎨 Frontend Manual
-
-```bash
-sudo apt install nodejs npm apache2 -y
-cd frontend
+# Frontend
+sudo apt install nodejs npm -y
 npm install
-vim .env
 npm run build
+
+# Deploy Frontend to Apache
+sudo apt install apache2 -y
 sudo cp -rf dist/* /var/www/html/
 sudo systemctl restart apache2
-```
 
----
-
-🧹 Docker Cleanup Commands
-
-```bash
-docker stop $(docker ps -aq)
-docker rm $(docker ps -aq)
-docker rm -f $(docker ps -aq)
-docker volume prune
-docker network prune
-```
-
----
-
-🏁 Architecture
-
-```
-Browser → Frontend (80) → Backend (8080) → MariaDB
-```
-
-```
+# -------------------------------
+# 7. Clean-up Commands (Start Over)
+# -------------------------------
+docker stop mariadb-container backend-container frontend-container
+docker rm mariadb-container backend-container frontend-container
+docker volume prune -f
+docker network prune -f
