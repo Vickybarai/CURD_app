@@ -1,4 +1,5 @@
 
+
 🐳 Student Registration System — Full Deployment Guide
 
 A 3-Tier Web Application
@@ -11,9 +12,9 @@ Frontend (React) → Backend (Spring Boot) → Database (MariaDB)
 📦 Project Structure
 
 EasyCRUD/
- ├── backend/     → Spring Boot API
- ├── frontend/    → React UI
- └── README.md
+├── backend/ → Spring Boot API
+├── frontend/ → React UI
+└── README.md
 
 
 ---
@@ -51,11 +52,11 @@ docker --version
 
 🧱 Step 2 — Run Database (MariaDB)
 
-Create persistent volume:
+Create volume
 
 docker volume create student-db-vol
 
-Start database container:
+Start container
 
 docker run -d \
   --name mariadb-container \
@@ -71,48 +72,43 @@ docker run -d \
 
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mariadb-container
 
-Save this IP — it will be used in backend configuration.
+Save this IP — needed in backend config.
 
 
 ---
 
 ⚙️ Step 4 — Backend Setup
 
-Clone repository:
-
 git clone https://github.com/shubhamkalsait/EasyCRUD.git
 cd EasyCRUD/backend
 
-Edit configuration file:
+Edit file:
 
 backend/src/main/resources/application.properties
 
-Update values:
+Change DB IP inside:
 
 spring.datasource.url=jdbc:mariadb://<DB_IP>:3306/studentdb
-spring.datasource.username=root
-spring.datasource.password=redhat
 
 
 ---
 
-🐳 Backend Dockerfile
+Backend Dockerfile
 
-Create file: backend/Dockerfile
+backend/Dockerfile
 
-FROM maven:3.8.3-openjdk-17
-WORKDIR /opt/app
-COPY . .
-RUN mvn clean package -DskipTests
-EXPOSE 8080
-ENTRYPOINT ["java","-jar","target/student-registration-backend-0.0.1-SNAPSHOT.jar"]
 
-Build and push image:
+---
+
+Build & Push Image
 
 docker build -t yourdockerhub/curd_app:backend-v1 .
 docker push yourdockerhub/curd_app:backend-v1
 
-Run backend container:
+
+---
+
+Run Backend
 
 docker run -d \
   --name backend-container \
@@ -124,35 +120,24 @@ docker run -d \
 
 🎨 Step 5 — Frontend Setup
 
-Move to frontend directory:
-
 cd ../frontend
-
-Edit environment file:
-
 vim .env
 
-Add:
+Edit API URL:
 
 VITE_API_URL="http://<SERVER_PUBLIC_IP>:8080/api"
 
 
 ---
 
-🐳 Frontend Dockerfile
+Frontend Dockerfile
 
-Create file: frontend/Dockerfile
+frontend/Dockerfile
 
-FROM node:22-alpine
-WORKDIR /opt/app
-COPY . .
-RUN npm install && npm run build
-RUN apk add --no-cache apache2
-RUN cp -rf dist/* /var/www/localhost/htdocs/
-EXPOSE 80
-CMD ["httpd","-D","FOREGROUND"]
 
-Build and run:
+---
+
+Build & Run
 
 docker build -t yourdockerhub/curd_app:frontend-v1 .
 docker push yourdockerhub/curd_app:frontend-v1
@@ -177,33 +162,23 @@ http://YOUR_SERVER_PUBLIC_IP
 
 ---
 
-⚙️ Backend Manual Setup
+⚙️ Backend Manual
 
 sudo apt install openjdk-17-jdk maven -y
 cd backend
 vim src/main/resources/application.properties
-
-Build and run:
-
 mvn clean package
 java -jar target/spring-backend-v1.jar
 
 
 ---
 
-🎨 Frontend Manual Setup
+🎨 Frontend Manual
 
 sudo apt install nodejs npm apache2 -y
 cd frontend
 npm install
 vim .env
-
-Add:
-
-VITE_API_URL="http://<BACKEND_IP>:8080/api"
-
-Build and deploy:
-
 npm run build
 sudo cp -rf dist/* /var/www/html/
 sudo systemctl restart apache2
@@ -218,18 +193,6 @@ docker rm $(docker ps -aq)
 docker rm -f $(docker ps -aq)
 docker volume prune
 docker network prune
-
-
----
-
-🧠 Files You MUST Modify
-
-File	What to Change
-
-backend/application.properties	Database IP
-frontend/.env	Backend public IP
-Docker image name	Your DockerHub username
-
 
 
 ---
