@@ -1,4 +1,4 @@
-```markdown
+
 # 🐳 Student Registration System — Full Deployment Guide
 
 A 3-Tier Web Application  
@@ -8,14 +8,14 @@ Frontend (React) → Backend (Spring Boot) → Database (MariaDB)
 
 ## 📦 Project Structure
 
-```
+
 
 EasyCRUD/
 ├── backend/   # Spring Boot API
 ├── frontend/  # React UI
 └── README.md
 
-```
+
 
 ---
 
