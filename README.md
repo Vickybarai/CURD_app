@@ -10,6 +10,10 @@
 
 All three pieces run inside **Docker** boxes so nothing breaks.
 
+
+
+[Details steps with dockerfile implementation]
+(https://github.com/Vickybarai/Devops/blob/main/Docker%2FDocker_4_Dockerfile_%26_Easy_CURD.MD)
 ---
 
 ## 2. One-time setup
