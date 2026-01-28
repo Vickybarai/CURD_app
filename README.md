@@ -9,11 +9,13 @@
 4. Open the page in your browser – done!
 
 All three pieces run inside **Docker** boxes so nothing breaks.
+Docker file is already in  project 
 
-___
 
-[Details steps with dockerfile creating](https://github.com/Vickybarai/Devops/blob/main/Docker%2FDocker_4_Dockerfile_%26_Easy_CURD.MD)
+[Create by creating dockerfile creating](https://github.com/Vickybarai/Devops/blob/main/Docker%2FDocker_4_Dockerfile_%26_Easy_CURD.MD)
+[Create with yaml file](https://github.com/Vickybarai/project/blob/main/3-Tier_EasyCRUD_%28using_yaml%29.md)
 ---
+___
 
 ## 2. One-time setup
 ```bash
