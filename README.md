@@ -333,5 +333,5 @@ kubectl apply -f k8s/ingress.yaml
 **Action:** Open `http://<YOUR-AWS-ELB-URL>`
 
 
-[Creating by dockerfile creating](https://github.com/Vickybarai/Devops/blob/main/Docker%2FDocker_4_Dockerfile_%26_Easy_CURD.MD)
-[Create with yaml file](https://github.com/Vickybarai/project/blob/main/3-Tier_EasyCRUD_%28using_yaml%29.md)
+[Creating by dockerfile:](https://github.com/Vickybarai/Devops/blob/main/Docker%2FDocker_4_Dockerfile_%26_Easy_CURD.MD)
+[Create with yaml file :](https://github.com/Vickybarai/project/blob/main/3-Tier_EasyCRUD_%28using_yaml%29.md)
