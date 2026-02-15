@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studentapp-frontend
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: studentapp-frontend
+  template:
+    metadata:
+      labels:
+        app: studentapp-frontend
+    spec:
+      containers:
+      - name: studentapp-frontend
+        image: shubhamkalsait1/studentapp-frontend:latest
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "400m"
+        ports:
+        - containerPort: 80
