@@ -20,20 +20,20 @@ git checkout cdec-b48
 git remote add origin https://github.com/Vickybarai/CURD_app.git
 git checkout -b k8s-curd
 ```
-
 ---
 
-### 1.2 Create Database Service YAML (Define Service Name)
-**Objective:** Create the DB service file *now* so you know the Service Name to use in the Backend configuration.
+### 1.2 Create Database Service YAML
+**Objective:** Define the DB Service Name.
 
 **File:** `k8s/studentapp-db-svc.yaml`
-
 **Content:**
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: studentapp-db-svc
+  labels:
+    app: studentapp-db
 spec:
   selector:
     app: studentapp-db
@@ -46,31 +46,30 @@ spec:
 ---
 
 ### 1.3 Update Backend Configuration
-**Objective:** Connect Backend to the Database using the Service Name defined in 1.2.
+**Objective:** Connect Backend to the Database.
+**IMPORTANT:** The database name must match Sir's YAML exactly (`studentapp-db`).
 
 **File:** `backend/src/main/resources/application.properties`
 
-**Edit the URL line:**
+**Content:**
 ```properties
-spring.datasource.url=jdbc:mariadb://studentapp-db-svc:3306/studentdb
+server.port=8080
+# CRITICAL: Use 'studentapp-db-src' (hyphen included) to  YAML configuration
+spring.datasource.url=jdbc:mariadb://studentapp-db-svc:3306/studentapp-db
 spring.datasource.username=root
 spring.datasource.password=redhat
 spring.jpa.hibernate.ddl-auto=update
 ```
-> **Dependency Check:** `studentapp-db-svc` must match the name in 1.2.
 
 ---
 
 ### 1.4 Update Frontend Configuration
-**Objective:** Tell Frontend how to call the API. We use relative paths for K8s Ingress so it works on any IP.
-
-**File:** `frontend/.env` (Create this file)
+**File:** `frontend/.env`
 
 **Content:**
 ```env
 VITE_API_URL="/api"
 ```
-> **Why:** Using `/api` ensures it works regardless of the IP (Localhost vs AWS). You do not need to hardcode the IP here.
 
 ---
 
@@ -105,11 +104,7 @@ CMD ["httpd", "-D", "FOREGROUND"]
 ---
 
 ### 1.6 Build and Push Docker Images
-**Objective:** Build the images with the correct configuration and push to Docker Hub.
-
 **Where:** Terminal
-**Action:** Replace `baraivicky` with your Docker ID.
-
 **Command:**
 ```bash
 # Backend
@@ -129,22 +124,14 @@ cd ..
 
 ## ✅ STEP 2 — DEPLOY TO KUBERNETES (Infrastructure Layer)
 
-Now deploy everything to the cluster in the **correct dependency order**.
+Deploying in exact dependency order, using Sir's YAML structure with your images.
 
 ### 2.1 Deploy Database (Data Layer)
-**Action:** Apply Service and StatefulSet. Wait for the Pod to be `Running`.
-
 **Command:**
 ```bash
 kubectl apply -f k8s/studentapp-db-svc.yaml
 kubectl apply -f k8s/studentapp-db-sts.yaml
 ```
-
-**Verify:**
-```bash
-kubectl get pods -w
-```
-*(Press Ctrl+C once the DB pod is Running)*
 
 **File Reference for `studentapp-db-sts.yaml`:**
 ```yaml
@@ -152,6 +139,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: studentapp-db
+  labels:
+    app: studentapp-db
 spec:
   selector:
     matchLabels:
@@ -171,18 +160,17 @@ spec:
           - name: "MARIADB_ROOT_PASSWORD"
             value: "redhat"
           - name: "MARIADB_DATABASE"
-            value: "studentdb"
+            value: "studentapp-db"
 ```
 
 ---
 
 ### 2.2 Deploy Backend (API Layer)
-**Action:** Create Service and Deployment.
-
 **Command:**
 ```bash
 kubectl apply -f k8s/backend/service.yaml
 kubectl apply -f k8s/backend/deployment.yaml
+kubectl apply -f k8s/backend/hpa.yaml
 ```
 
 **File Reference for `backend/service.yaml`:**
@@ -191,6 +179,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: studentapp-svc
+  labels:
+    app: studentapp
 spec:
   selector:
     app: studentapp
@@ -205,8 +195,12 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: studentapp
+  labels:
+    app: studentapp
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: studentapp
@@ -218,19 +212,49 @@ spec:
       containers:
       - name: studentapp
         image: baraivicky/k8s:backend-v1
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "400m"
         ports:
         - containerPort: 8080
+```
+
+**File Reference for `backend/hpa.yaml`:**
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: studentapp-hpa
+  labels:
+    app: studentapp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: studentapp
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
 ```
 
 ---
 
 ### 2.3 Deploy Frontend (UI Layer)
-**Action:** Create Service and Deployment.
-
 **Command:**
 ```bash
 kubectl apply -f k8s/frontend/service.yaml
 kubectl apply -f k8s/frontend/deployment.yaml
+kubectl apply -f k8s/frontend/hpa.yaml
 ```
 
 **File Reference for `frontend/service.yaml`:**
@@ -255,6 +279,8 @@ metadata:
   name: studentapp-frontend
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: studentapp-frontend
@@ -266,28 +292,50 @@ spec:
       containers:
       - name: studentapp-frontend
         image: baraivicky/k8s:frontend-v1
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+          requests:
+            memory: "128Mi"
+            cpu: "400m"
         ports:
         - containerPort: 80
+```
+
+**File Reference for `frontend/hpa.yaml`:**
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: studentapp-frontend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: studentapp-frontend
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
 ```
 
 ---
 
 ### 2.4 Deploy Ingress (Entry Point)
-**Objective:** Expose the application to the outside world using your AWS Load Balancer URL.
+**Objective:** Expose the application.
 
-**👉 IMPORTANT: Get your AWS Endpoint First**
-Before creating the file, find your Load Balancer DNS name. Run this command:
+**Command:**
 ```bash
-kubectl get svc -n ingress-nginx
+kubectl apply -f k8s/ingress.yaml
 ```
-*Copy the **EXTERNAL-IP** address (e.g., `a1b2c...elb.amazonaws.com`).*
 
-**Create Ingress File:**
-**Where:** `k8s/ingress.yaml`
-
-**Action:** Replace `<YOUR-AWS-ELB-URL>` below with the address you just found.
-
-**Content:**
+**File Reference for `ingress.yaml`:**
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -298,7 +346,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: <YOUR-AWS-ELB-URL> 
+  - host: af049ffa178f7428aa19c4548441ee9f-1118725864.ap-southeast-1.elb.amazonaws.com
     http:
       paths:
       - pathType: Prefix
@@ -308,6 +356,7 @@ spec:
             name: studentapp-svc
             port: 
               number: 8080
+
       - pathType: Prefix
         path: "/"
         backend:
@@ -317,17 +366,7 @@ spec:
               number: 80
 ```
 
-**Apply the Ingress:**
-```bash
-kubectl apply -f k8s/ingress.yaml
-```
-
----
-
-## 🔎 Final Logical View
-
-1.  **STEP 1 = Configure + Build:** We ensured the code knows how to talk to K8s (`studentapp-db-svc`) and we baked that logic into the images.
-2.  **STEP 2 = Deploy in Order:** We launched the DB first (so it's ready), then Backend, then Frontend, then Ingress to connect them all.
+> **⚠️ IMPORTANT NOTE:** The `host` in this Ingress file is currently hardcoded to Sir's AWS URL. **You must change this** to your own Load Balancer DNS name (`kubectl get svc -n ingress-nginx`) if you want the application to resolve for you.
 
 ### Access the App
 **Command:**
@@ -337,6 +376,16 @@ kubectl get ingress studentapp-ingress
 **Action:** Copy the **ADDRESS** and open it in your browser.
 
 > **Note on Configuration:** Since we used `VITE_API_URL="/api"` in Step 1.4, the frontend will automatically connect to the backend on whatever AWS URL you used in the Ingress Host.
+
+---
+
+## 🔎 Final Verification Checklist
+
+1.  ✅ **Service Names:** All Services (`studentapp-db-svc`, `studentapp-svc`, `studentapp-frontend-svc`) match the `application.properties` and YAML selectors.
+2.  ✅ **Database Name:** `studentapp-db` (with hyphen) is used in both YAML and `application.properties`.
+3.  ✅ **Resources & HPA:** Included exactly as per Sir's code.
+4.  ✅ **Docker Images:** Updated to `baraivicky/k8s:backend-v1` and `baraivicky/k8s:frontend-v1`.
+
 
 ---
 **Reference Links:**
