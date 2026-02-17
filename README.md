@@ -15,10 +15,10 @@ cd EasyCRUD
 git checkout cdec-b48
 ```
 
-**Push to your own repo at the end of setup:**
+**OR PULL your own repo :**
 ```bash
 git remote add origin https://github.com/Vickybarai/CURD_app.git
-git checkout -b k8s-curd
+git checkout k8s-curd
 ```
 ---
 
@@ -47,7 +47,7 @@ spec:
 
 ### 1.3 Update Backend Configuration
 **Objective:** Connect Backend to the Database.
-**IMPORTANT:** The database name must match Sir's YAML exactly (`studentapp-db`).
+**IMPORTANT:** The database name must match   YAML exactly (`studentapp-db`).
 
 **File:** `backend/src/main/resources/application.properties`
 
@@ -107,6 +107,9 @@ CMD ["httpd", "-D", "FOREGROUND"]
 **Where:** Terminal
 **Command:**
 ```bash
+# login to Docker Hub (if not already logged in)
+docker login -u <your-dockerhub-username>
+password: <your-dockerhub-password>
 # Backend
 cd backend
 docker build -t baraivicky/k8s:backend-v1 .
@@ -124,7 +127,7 @@ cd ..
 
 ## ✅ STEP 2 — DEPLOY TO KUBERNETES (Infrastructure Layer)
 
-Deploying in exact dependency order, using Sir's YAML structure with your images.
+Deploying in exact dependency order, using   YAML structure with your images.
 
 ### 2.1 Deploy Database (Data Layer)
 **Command:**
@@ -329,6 +332,17 @@ spec:
 
 ### 2.4 Deploy Ingress (Entry Point)
 **Objective:** Expose the application.
+ ```bash
+ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+ 
+ kubectl get svc -n ingress-nginx
+
+ ```
+
+> **⚠️ IMPORTANT NOTE:** The `host` in this Ingress file is currently hardcoded . **You must change this** to your own Load Balancer DNS name .
+
+
+> **Note on Configuration:** Since we used `VITE_API_URL="/api"` in Step 1.4, the frontend will automatically connect to the backend on whatever AWS URL you used in the Ingress Host.
 
 **Command:**
 ```bash
@@ -346,7 +360,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: af049ffa178f7428aa19c4548441ee9f-1118725864.ap-southeast-1.elb.amazonaws.com
+  - host:  a13141857ba3548bd9fd67c82fa7f84d-357852280.ca-central-1.elb.amazonaws.com
     http:
       paths:
       - pathType: Prefix
@@ -366,16 +380,13 @@ spec:
               number: 80
 ```
 
-> **⚠️ IMPORTANT NOTE:** The `host` in this Ingress file is currently hardcoded to Sir's AWS URL. **You must change this** to your own Load Balancer DNS name (`kubectl get svc -n ingress-nginx`) if you want the application to resolve for you.
-
 ### Access the App
 **Command:**
 ```bash
 kubectl get ingress studentapp-ingress
 ```
-**Action:** Copy the **ADDRESS** and open it in your browser.
+**Action:** Copy the **ADDRESS / ENDPOINT ** and open it in your browser.
 
-> **Note on Configuration:** Since we used `VITE_API_URL="/api"` in Step 1.4, the frontend will automatically connect to the backend on whatever AWS URL you used in the Ingress Host.
 
 ---
 
@@ -383,7 +394,7 @@ kubectl get ingress studentapp-ingress
 
 1.  ✅ **Service Names:** All Services (`studentapp-db-svc`, `studentapp-svc`, `studentapp-frontend-svc`) match the `application.properties` and YAML selectors.
 2.  ✅ **Database Name:** `studentapp-db` (with hyphen) is used in both YAML and `application.properties`.
-3.  ✅ **Resources & HPA:** Included exactly as per Sir's code.
+3.  ✅ **Resources & HPA:** Included exactly as per code.
 4.  ✅ **Docker Images:** Updated to `baraivicky/k8s:backend-v1` and `baraivicky/k8s:frontend-v1`.
 
 
