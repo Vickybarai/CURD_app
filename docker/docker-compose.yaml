@@ -1,0 +1,37 @@
+services:
+  database:
+    image: mariadb:latest
+    environment:
+      MARIADB_ROOT_PASSWORD: "redhat"
+      MYSQL_DATABASE: "studentapp"
+    volumes:
+      - "my-vol123:/var/lib/mysql"
+    ports:
+      - "3306:3306"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_NAME: "studentapp"
+      DB_USER: "root"
+      DB_PASSWORD: "redhat"
+      DB_HOST: "database"
+    depends_on:
+      - database
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    environment:
+      PUBLIC_IP: "13.212.151.46"
+    depends_on:
+      - backend
+
+volumes:
+  my-vol123: {}
+
+
+
